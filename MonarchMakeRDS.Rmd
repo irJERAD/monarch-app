@@ -1,0 +1,89 @@
+---
+title: "monarchMakeRDS"
+author: "Jerad Acosta"
+date: "May 14, 2015"
+output: html_document
+---
+
+```{r}
+# Set working Directory to CSV data location
+## changed file to data location
+wd <- "/Users/irJERAD/Documents/Data-Apps/monarch-dashboard"
+setwd(wd)
+
+# load original data set into R for Manipulation
+filePath <- "MonarchPunishmentsEditCSV.csv"
+data <- read.csv(filePath)
+
+# Set working directory to Shinny app
+## Just create RDS the save to ./data directory
+
+# Create data Directory for .rds file after done manipulating it
+if(!file.exists("./monarch-app/data")){dir.create("./monarch-app/data")}
+```
+
+
+```{r, reduce empty factors}
+# find and remove empty factor level
+r <- which(data$timestamp == "")
+data[r,]
+data <- data[-c(r),]
+```
+
+## Transcibing Variables
+
+### Correct Date-Time
+Current CSV file has var = "data_and_time_of_misbehavior" in class Factor
+Change to class "POSIXlt" "POSIXt"
+```{r, create POSIX date-time var}
+data$date_time <- strptime(as.character(data$date_and_time_of_misbehavior), format = "%m/%d/%Y %T")
+```
+
+### Create $environment variable class factor
+```{r}
+# Create environment factor variable
+# Search for word class to create a classroom level in the environmental factors
+# Note for personal learning: Which ever factor level is assigned first is the one that stays
+# Just like an If / Else statement - Priority goes to first statement
+data$environment <- ifelse(grepl("class", data$location_of_misbehavior, ignore.case = TRUE), "Classroom",
+                           ifelse(grepl("PE", data$location_of_misbehavior, ignore.case = TRUE), "PE", 
+                                  ifelse(grepl("lunch", data$location_of_misbehavior, ignore.case = TRUE), "Lunch",
+                                         ifelse(grepl("yoga", data$location_of_misbehavior, ignore.case = TRUE), "Yoga",
+                                                ifelse(grepl("gym", data$location_of_misbehavior, ignore.case = TRUE), "Gym", 
+                                                       ifelse(grepl("blacktop", data$location_of_misbehavior, ignore.case = TRUE), "Blacktop",
+                                                              ifelse(grepl("cafeteria", data$location_of_misbehavior, ignore.case = TRUE), "Cafeteria",
+                                                                     ifelse(grepl("hallway", data$location_of_misbehavior, ignore.case = TRUE), "Hallway",
+                                                                            ifelse(grepl("playground", data$location_of_misbehavior, ignore.case = TRUE), "Playground",
+                                                                                   ifelse(grepl("snack", data$location_of_misbehavior, ignore.case = TRUE), "Snack Time", data$location_of_misbehavior))))))))))
+```
+
+
+## Reduce Number of Variables
+
+To reduce the size of the data object we should remove variables we are not going to be using in the visualizations for this application
+
+### Remove Replaced Variables
++ date_and_time_of_misbehavior
++ location_of_misbehavior
++ time_stamp
+
+```{r}
+drop <- c("date_and_time_of_misbehavior", "location_of_misbehavior", "time_stamp")
+data <- data[,!(names(data) %in% drop)]
+```
+
+### Reduce duplicated Variables
++ documenting_staff_id & documenting_staff
++ reporting_staff_id & reporting_staff
+
+### Variables not being used (yet)
++ classroom_or_administrative_managed
++ narrative_discription_of_misbehavior
+    + could use NLP algorithm for future use
++ d12_planning_completed
++ narrative_of_concequence
+
+
+### Need to Transcribe
++ type_of_misbehavior
++ concequence
