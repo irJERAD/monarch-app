@@ -39,7 +39,7 @@ Change to class "POSIXlt" "POSIXt"
 data$date_time <- strptime(as.character(data$date_and_time_of_misbehavior), format = "%m/%d/%Y %T")
 ```
 
-### Create $environment variable class factor
+### Create $environment variable then cast
 ```{r}
 # Create environment factor variable
 # Search for word class to create a classroom level in the environmental factors
@@ -57,6 +57,13 @@ data$environment <- ifelse(grepl("class", data$location_of_misbehavior, ignore.c
                                                                                    ifelse(grepl("snack", data$location_of_misbehavior, ignore.case = TRUE), "Snack Time", data$location_of_misbehavior))))))))))
 ```
 
+#### cast $environment variable class factor (currently character)
+**TODO:** 
+[ ] This results in 45 levels which should be reduced to necessary and _other_
+
+```{r, environment-var-to-factor}
+data$environment <- as.factor(data$environment)
+```
 
 ## Reduce Number of Variables
 
