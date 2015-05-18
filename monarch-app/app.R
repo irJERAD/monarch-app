@@ -7,7 +7,7 @@ library(shiny)
 library(shinydashboard)
 
 # Graphics
-library(ggviz)
+library(ggvis)
 
 ## Load Data
 data <- readRDS('./data/student-referrals.rds')
@@ -80,7 +80,7 @@ body  <- dashboardBody(
                 column(6,
                        box(
                                title = "",
-                               plotOutput("ggviz1")))
+                               plotOutput("ggvis1")))
         )
 )
 
@@ -98,8 +98,9 @@ server <- function(input, output) {
                 hist(data2)}
         })
         
-        output$ggviz1 <- renderPlot({
-                data %>%
+        output$ggvis1 <- renderPlot({
+                data %>% ggvis(~student_id, ~reporting_staff_id) %>% 
+                        layer_points(fill = ~factor(grade))
         })
 }
 
