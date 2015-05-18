@@ -8,11 +8,11 @@ output: html_document
 ```{r}
 # Set working Directory to CSV data location
 ## changed file to data location
-wd <- "/Users/irJERAD/Documents/Data-Apps/monarch-dashboard"
+wd <- "~/Documents/Data-Apps/monarch-dashboard"
 setwd(wd)
 
 # load original data set into R for Manipulation
-filePath <- "MonarchPunishmentsEditCSV.csv"
+filePath <- "./MonarchPunishmentsEditCSV.csv"
 data <- read.csv(filePath)
 
 # Set working directory to Shinny app
@@ -87,3 +87,10 @@ data <- data[,!(names(data) %in% drop)]
 ### Need to Transcribe
 + type_of_misbehavior
 + concequence
+
+
+## Write RDS file
+using saveRDS method to write and readRDS to load
+```{r, save-rds}
+saveRDS(data, file = "./monarch-app/data/student-referrals.rds")
+```
