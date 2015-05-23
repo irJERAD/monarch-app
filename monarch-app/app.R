@@ -8,9 +8,20 @@ library(shinydashboard)
 
 # Graphics
 library(ggvis)
+library(ggplot2)
 
 ## Load Data
 data <- readRDS('./data/student-referrals.rds')
+
+## Arrange Count by frequency for number of referrals graphic
+# Number of events per student table
+eventTable <- table(data$student_id)
+# create data frame from table
+tframe <- as.data.frame(eventTable)
+names(tframe) <- c("id", "freq")
+plot(tframe[[2]], type = 'h', xlab = "Student ID", ylab = " Number of Offenses")
+quantile(eventTable)
+tframe <- arrange(tframe, desc(freq))
 
 header <- dashboardHeader(
         title = "Monarch Referral App",
@@ -27,9 +38,8 @@ header <- dashboardHeader(
                      ),
                      messageItem(
                              from = "Support",
-                             message = "The new server is ready.",
-                             icon = icon("life-ring"),
-                             time = "2014-12-01"
+                             message = "Contact the Developer.",
+                             icon = icon("life-ring")
                      )
         ))
 
@@ -49,7 +59,7 @@ sidebar  <- dashboardSidebar(
                                     "Student Grade" = "grade")),
         checkboxInput("conditionalPanel", "Count"),
         conditionalPanel(
-                condition = "input.conditionalPanel != true",
+                condition = "input.conditionalPanel == true",
                 selectInput("conditionalYAxis", "Y-Axis",
                             list("Student ID" = "student_id",
                                  "Location" = "environment",
@@ -59,28 +69,35 @@ sidebar  <- dashboardSidebar(
         )
 
 body  <- dashboardBody(
-        tabBox(
-                title = "Referral Count",
-                        
-                # Boxes need to be put in a row (or column)
-                fluidRow(
-                        box(
-                                title = "Histogram Title", width = 12,
-                                plotOutput("plot1", height = 500))
-                ),
-                fluidRow(
-                        box(
-                                title = "Change Bar Width",
-                                sliderInput("slider", "Number of observations:", 1, 50, 1)
+        # fluid rows have a width of 12 the entire page
+        fluidRow(12,
+        # tabBox will be used to select the form of visualization
+                # tabBox args: 
+                ## title (displayed on UI), id (for use by server input$id)
+                ## height & width (similar to box arguments), side (which side the tabs are on)
+        tabsetPanel("Plot Type",
+                tabPanel("Count", 
+                        column(12,
+                               plotOutput("plot1", height = "500px"),
+                               radioButtons("referralCount", label = "Arrange By:",
+                                            choices = list("Student ID" = "id", "Frequency" = "freq")
+                               )
                         )
-                )
-        ),
-        tabBox(
-                title = "ggvis",
-                column(6,
-                       box(
-                               title = "",
-                               plotOutput("ggvis1")))
+                ),
+                tabPanel("Grade",
+                         column(12,
+#                                  radioButtons("fill", "Select Fill Variable:",
+#                                               choices = list("Environment" = "environment")),
+                                ggvisOutput("plotGrade")
+                        )
+                ),
+                tabPanel("Time",
+                         column(12,
+                                plotOutput("time", height = "500px")))
+#                 ),
+#                 tabPanel("ggplot2",  plotOutput("ggvis1")),
+#                 )
+        )
         )
 )
 
@@ -91,16 +108,38 @@ server <- function(input, output) {
         histdata <- rnorm(500)
         
         output$plot1 <- renderPlot({
-               if (input$conditionalPanel == TRUE) {
-                       hist(data$student_id)
-               } else {
-                data2 <- histdata[seq_len(input$slider)]
-                hist(data2)}
+                # create histogram of misbehavior counts by student_id
+               if (input$referralCount == "id") {
+                       # using hist {stat}
+                       hist(data$student_id, xlab = "Student ID",
+                            ylab = "Number of Referrals",
+                            main = "Referrals per Student",
+                            nclass = 275)
+               } else if(input$referralCount == "freq") {
+                       plot(tframe[[2]], type = 'h', xaxt='n',
+                            xlab = "Student ID", ylab = " Number of Offenses",
+                            main = "<-- Most Offenses to Least Offenses -->")
+               }
         })
         
+        # create a reactive expression wrapper for input$size
+#         input_fill <- reactive(input$fill)
+        data %>% 
+                ggvis(~grade) %>% 
+                layer_histograms(width = 1) %>% 
+                bind_shiny("plotGrade", "ggvis_ui")
         output$ggvis1 <- renderPlot({
-                data %>% ggvis(~student_id, ~reporting_staff_id) %>% 
-                        layer_points(fill = ~factor(grade))
+                # using layer_histograms() {ggvis}
+                data %>% 
+                        ggvis(~student_id) %>% 
+                        layer_histograms(width = 1) %>% 
+                        bind_shiny("ggvis", "ggvis_ui")
+        })
+        
+        output$time <- renderPlot({
+                hist(as.numeric((format(data$date_time[1:587], format = "%H"))),
+                     ylab = "Number of Referrals", xlab = "Hour of the Day",
+                     main = "Number of Referrals across time", nclass = 24)
         })
 }
 

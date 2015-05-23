@@ -12,7 +12,7 @@ wd <- "~/Documents/Data-Apps/monarch-dashboard"
 setwd(wd)
 
 # load original data set into R for Manipulation
-filePath <- "./MonarchPunishmentsEditCSV.csv"
+filePath <- "./Monarch_Original.csv"
 data <- read.csv(filePath)
 
 # Set working directory to Shinny app
@@ -23,12 +23,20 @@ if(!file.exists("./monarch-app/data")){dir.create("./monarch-app/data")}
 ```
 
 
+### Newly edited data does not need this step
 ```{r, reduce empty factors}
 # find and remove empty factor level
-r <- which(data$timestamp == "")
-data[r,]
-data <- data[-c(r),]
+
+# r <- which(data$timestamp == "")
+# data[r,]
+# data <- data[-c(r),]
 ```
+
+## ReName Variables
+```{r, rename-variables}
+# Done by hand in Numbers / Excel and Saved in Directory
+```
+
 
 ## Transcibing Variables
 
@@ -36,7 +44,8 @@ data <- data[-c(r),]
 Current CSV file has var = "data_and_time_of_misbehavior" in class Factor
 Change to class "POSIXlt" "POSIXt"
 ```{r, create POSIX date-time var}
-data$date_time <- strptime(as.character(data$date_and_time_of_misbehavior), format = "%m/%d/%Y %T")
+data$date_time <- strptime(as.character(data$date_and_time_of_misbehavior), format = "%Y-%m-%d %H:%M:%S")
+# Create Numerical Time for Easier Graphical Computing
 ```
 
 ### Create $environment variable then cast
@@ -54,12 +63,13 @@ data$environment <- ifelse(grepl("class", data$location_of_misbehavior, ignore.c
                                                               ifelse(grepl("cafeteria", data$location_of_misbehavior, ignore.case = TRUE), "Cafeteria",
                                                                      ifelse(grepl("hallway", data$location_of_misbehavior, ignore.case = TRUE), "Hallway",
                                                                             ifelse(grepl("playground", data$location_of_misbehavior, ignore.case = TRUE), "Playground",
-                                                                                   ifelse(grepl("snack", data$location_of_misbehavior, ignore.case = TRUE), "Snack Time", data$location_of_misbehavior))))))))))
+                                                                                   ifelse(grepl("snack", data$location_of_misbehavior, ignore.case = TRUE), "Snack Time", NA))))))))))
 ```
 
 #### cast $environment variable class factor (currently character)
 **TODO:** 
-[ ] This results in 45 levels which should be reduced to necessary and _other_
+[X] This results in 45 levels which should be reduced to necessary and _other_
+adding NA as the else statement fixed this
 
 ```{r, environment-var-to-factor}
 data$environment <- as.factor(data$environment)
@@ -74,6 +84,8 @@ To reduce the size of the data object we should remove variables we are not goin
 + location_of_misbehavior
 + time_stamp
 
+#### DID NOT DO
+Saved variables since RDS file is still small and the project is still in development
 ```{r}
 drop <- c("date_and_time_of_misbehavior", "location_of_misbehavior", "time_stamp")
 data <- data[,!(names(data) %in% drop)]
