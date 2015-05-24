@@ -10,6 +10,9 @@ library(shinydashboard)
 library(ggvis)
 library(ggplot2)
 
+# data manipulation
+library(dplyr)
+
 ## Load Data
 data <- readRDS('./data/student-referrals.rds')
 
@@ -76,24 +79,44 @@ body  <- dashboardBody(
                 ## title (displayed on UI), id (for use by server input$id)
                 ## height & width (similar to box arguments), side (which side the tabs are on)
         tabsetPanel("Plot Type",
+        # Histogram of Referrals per student
                 tabPanel("Count", 
                         column(12,
                                plotOutput("plot1", height = "500px"),
                                radioButtons("referralCount", label = "Arrange By:",
-                                            choices = list("Student ID" = "id", "Frequency" = "freq")
-                               )
-                        )
+                                            choices = list("Student ID" = "id", "Frequency" = "freq"),
+                                            selected = "id"
+                                        )
+                                )
+                        ),
+                tabPanel("ggCount", 
+                         column(12,
+                                ggvisOutput("ggvis1"),
+                                radioButtons("ggreferralCount", label = "Arrange By:",
+                                             choices = list("Student ID" = "id", "Frequency" = "freq"),
+                                             selected = "id"
+                                )
+                         )
                 ),
+        # Histogram of Referrals per grade
                 tabPanel("Grade",
                          column(12,
 #                                  radioButtons("fill", "Select Fill Variable:",
 #                                               choices = list("Environment" = "environment")),
                                 ggvisOutput("plotGrade")
-                        )
-                ),
+                                )
+                        ),
+        # histogram of Referrals per hour AND per month
                 tabPanel("Time",
                          column(12,
-                                plotOutput("time", height = "500px")))
+                                plotOutput("time", height = "500px"),
+                                radioButtons("timeType", label = "",
+                                             choices = list("Hours of the Day" = "H",
+                                                            "Day of the Week" = "A",
+                                                            "Month of the Year" = "m")
+                                             )
+                                )
+                        )
 #                 ),
 #                 tabPanel("ggplot2",  plotOutput("ggvis1")),
 #                 )
@@ -122,24 +145,37 @@ server <- function(input, output) {
                }
         })
         
+        
+        
         # create a reactive expression wrapper for input$size
 #         input_fill <- reactive(input$fill)
         data %>% 
                 ggvis(~grade) %>% 
                 layer_histograms(width = 1) %>% 
-                bind_shiny("plotGrade", "ggvis_ui")
-        output$ggvis1 <- renderPlot({
+                bind_shiny("plotGrade")
+
                 # using layer_histograms() {ggvis}
-                data %>% 
-                        ggvis(~student_id) %>% 
-                        layer_histograms(width = 1) %>% 
-                        bind_shiny("ggvis", "ggvis_ui")
-        })
-        
+
+        data %>% 
+                ggvis(~student_id) %>% 
+                layer_histograms(width = 1) %>% 
+                bind_shiny("ggvis1")
+
+        ## Creat Time Plot
         output$time <- renderPlot({
-                hist(as.numeric((format(data$date_time[1:587], format = "%H"))),
-                     ylab = "Number of Referrals", xlab = "Hour of the Day",
-                     main = "Number of Referrals across time", nclass = 24)
+                if(input$timeType == "H") {
+                        hist(as.numeric((format(data$date_time, format = "%H"))),
+                             ylab = "Number of Referrals", xlab = "Hour of the Day",
+                             main = "Number of Referrals across time", nclass = 24)
+                } else if(input$timeType == "m") {
+                        hist(as.numeric((format(data$date_time, format = "%m"))),
+                             ylab = "Number of Referrals", xlab = "Month",
+                             main = "Number of Referrals across time", nclass = 12)
+                } else if(input$timeType == "A") {
+                        hist(as.numeric((format(data$date_time, format = "%u"))),
+                             ylab = "Number of Referrals", xlab = "Month",
+                             main = "Number of Referrals per Day of the Week", nclass = 7)
+                }
         })
 }
 
