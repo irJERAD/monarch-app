@@ -148,19 +148,25 @@ server <- function(input, output) {
         
         
         # create a reactive expression wrapper for input$size
-#         input_fill <- reactive(input$fill)
+        #input_fill <- reactive(input$fill)
         data %>% 
                 ggvis(~grade) %>% 
                 layer_histograms(width = 1) %>% 
+                add_tooltip(function(data){paste0("Grade: ", data$xmin + 0.5)}, "hover") %>%
                 bind_shiny("plotGrade")
 
                 # using layer_histograms() {ggvis}
 
+        
         data %>% 
                 ggvis(~student_id) %>% 
                 layer_histograms(width = 1) %>% 
+                add_tooltip(function(data) {paste0("Student ID: ",
+                                                   data$xmin + 0.5,
+                                                   "<br>",
+                                                   "referrals: ", data$stack_upr_)}, "hover") %>% 
                 bind_shiny("ggvis1")
-
+        
         ## Creat Time Plot
         output$time <- renderPlot({
                 if(input$timeType == "H") {
