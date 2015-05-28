@@ -58,12 +58,13 @@ sidebar  <- dashboardSidebar(
         selectInput("yVariable", "Select Variable to Count:",
                     c("Student ID" = "student_id",
                       "Grade" = "grade"),selected = "student_id"),
+        uiOutput("ggvisPlot_ui"),
         radioButtons("xaxis", label = ("X-Axis"),
                      choices = list("Student ID" = "student_id",
                                     "Location" = "environment",
                                     "Time" = "date_time",
                                     "Student Grade" = "grade"),
-                     selected = "~student_id"),
+                     selected = "student_id"),
         menuItem(text = "Y-Axis", tabName = "Time", icon = icon("line-chart")),
         radioButtons("yaxis", label = ("Y-Axis"),
                      choices = list("Student ID" = "student_id",
@@ -78,15 +79,7 @@ sidebar  <- dashboardSidebar(
                                  "Location" = "environment",
                                  "Time" = "date_time",
                                  "Student Grade" = "grade"))
-        ),
-        selectInput(inputId = "x",
-                    label = "Choose X",
-                    choices = c('SepalLength', 'SepalWidth', 'PetalLength', 'PetalWidth'),
-                    selected = "SepalLength"),
-        selectInput(inputId = "y",
-                    label = "Choose Y",
-                    choices = c('SepalLength', 'SepalWidth', 'PetalLength', 'PetalWidth'),
-                    selected = "SepalWidth")
+        )
 )
 
 body  <- dashboardBody(
@@ -128,18 +121,34 @@ body  <- dashboardBody(
                                              radioButtons("timeType", label = "",
                                                           choices = list("Hours of the Day" = "H",
                                                                          "Day of the Week" = "A",
-                                                                         "Month of the Year" = "m")
-                                             )
+                                                                         "Month of the Year" = "m"),
+                                             ),
+                                             ggvisOutput("gtime")
                                       )
                              ),
+                             tabPanel("Reporting Staff",
+                                      column(12,
+                                             ggvisOutput("staff")
+                                      )
+                             ),
+                             tabPanel("Environment",
+                                      column(12,
+                                             ggvisOutput("env")
+                                             )
+                                      ),
                              tabPanel("Interactive Example",
                                       column(12,
-                                             showOutput("myChart", "polycharts")
+                                             showOutput("myChart", "polycharts"),
+                                             selectInput(inputId = "x",
+                                                         label = "Choose X",
+                                                         choices = c('SepalLength', 'SepalWidth', 'PetalLength', 'PetalWidth'),
+                                                         selected = "SepalLength"),
+                                             selectInput(inputId = "y",
+                                                         label = "Choose Y",
+                                                         choices = c('SepalLength', 'SepalWidth', 'PetalLength', 'PetalWidth'),
+                                                         selected = "SepalWidth")
                                              )
                                       )
-                             #                 ),
-                             #                 tabPanel("ggplot2",  plotOutput("ggvis1")),
-                             #                 )
                  )
         )
 )
@@ -149,7 +158,7 @@ ui <- dashboardPage(header, sidebar, body, skin = "yellow")
 server <- function(input, output) {
         
         # create ggFinal
-        #input_x <- reactive(input$xaxis)
+        observe(intput_x <- input$xaxis)
         
         # SAMPLE
         plotData <- reactive({
@@ -160,35 +169,38 @@ server <- function(input, output) {
         # define axis for labeling
         label <- c("Student ID: ")
         
-        
+        ## Create Interactive Count Plot
+        #TODO: still trying to change labels for dynamic "hover" effect
         label <- reactive({
                 if(input$yVariable == "student_id") return("Student ID: ")
                 else if(input$yVariable == "grade") return("Grade: ")
         })
-        
+        # Generate Histogram of count
         reactive({
                 if(input$yVariable == "student_id"){
-                plotData() %>%  ggvis(x=~x) %>%
-                        layer_histograms(width = 1, fill := "green") %>%
-                        #arrange(y) %>%
-                        add_axis("x", title = "Student ID") %>%
-                        add_tooltip(function(df){paste0("Student ID: ",
-                                                        df$xmin+0.5,
-                                                        "<br>",
-                                                        "Referrals: ",
-                                                        df$stack_upr_)}, "hover")
-        } else if(input$yVariable == "grade"){
-                plotData() %>%  ggvis(x=~x) %>%
-                        layer_histograms(width = 1, fill := "green") %>%
-                        #arrange(y) %>%
-                        add_axis("x", title = "Grade Level") %>%
-                        add_tooltip(function(df){paste0("Grade: ",
-                                                        df$xmin+0.5,
-                                                        "<br>",
-                                                        "Referrals: ",
-                                                        df$stack_upr_)}, "hover")}  
-        }) %>%  bind_shiny("ggvisPlot")
-
+                        # student_id Histogram
+                        plotData() %>%  ggvis(x=~x) %>%
+                                layer_histograms(width = 1, fill := "green") %>%
+                                #arrange(y) %>%
+                                add_axis("x", title = "Student ID") %>%
+                                add_tooltip(function(df){paste0("Student ID: ",
+                                                                df$xmin+0.5,
+                                                                "<br>",
+                                                                "Referrals: ",
+                                                                df$stack_upr_)}, "hover")
+                } else if(input$yVariable == "grade"){
+                        # grade Histogram
+                        plotData() %>%  ggvis(x=~x) %>%
+                                layer_histograms(width = 1, fill := "green") %>%
+                                #arrange(y) %>%
+                                add_axis("x", title = "Grade Level") %>%
+                                add_tooltip(function(df){paste0("Grade: ",
+                                                                df$xmin+0.5,
+                                                                "<br>",
+                                                                "Referrals: ",
+                                                                df$stack_upr_)}, "hover")}  
+        }) %>%  bind_shiny("ggvisPlot", "ggvisPlot_ui")
+        
 
         output$plot1 <- renderPlot({
                 # create histogram of misbehavior counts by student_id
@@ -221,6 +233,41 @@ server <- function(input, output) {
                              main = "Number of Referrals per Day of the Week", nclass = 7)
                 }
         })
+        
+        ## gtime Plot TODO
+        data$time <- as.Date(data$date_time, format = "%H")
+        p <- data %>%
+                ggvis(~time, ~grade) %>%
+                layer_points(fill = ~environment)
+        p %>% scale_datetime("x", nice = "minute", clamp = TRUE) %>% bind_shiny("gtime")
+        
+        ## Create Reporting Staff Graphics
+        # Histogram with repoting staff
+        data %>%
+                ggvis(~reporting_staff_id) %>%
+                layer_histograms(width = 1, fill := "green") %>%
+                add_axis("x", title = "Reporting Staff ID") %>%
+                add_tooltip(function(df){paste0("Reporting Staff ID: ", df$xmin + 0.5)}, "hover") %>%
+                bind_shiny("staff")
+        
+        ## Creat Environment Plot
+        
+        p <- data %>%
+                ggvis(~student_id, ~reporting_staff_id) %>%
+                layer_points(fill = ~environment, shape = ~environment) %>%
+                add_tooltip(function(df){paste0("Student ID: ",
+                                                df$student_id,
+                                                "<br>",
+                                                "Grade: ",
+                                                df$grade,
+                                                "<br>",
+                                                "Reporting Staff: ",
+                                                df$reporting_staff_id,
+                                                "<br>",
+                                                "Location: ",
+                                                df$environment
+                                                )}, "hover") %>%
+                bind_shiny("env")        
         
         ## A Sample of Interactive Output Using rCharts
         output$myChart <- renderChart({
