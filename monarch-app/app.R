@@ -238,8 +238,8 @@ server <- function(input, output) {
         data$time <- as.Date(data$date_time, format = "%H")
         p <- data %>%
                 ggvis(~time, ~grade) %>%
-                layer_points(fill = ~environment)
-        p %>% scale_datetime("x", nice = "minute", clamp = TRUE) %>% bind_shiny("gtime")
+                layer_points(fill = ~environment) %>% add_tooltip(function(df){paste0()})
+        p %>% scale_datetime("x", nice = "second", clamp = TRUE) %>% bind_shiny("gtime")
         
         ## Create Reporting Staff Graphics
         # Histogram with repoting staff
@@ -247,7 +247,7 @@ server <- function(input, output) {
                 ggvis(~reporting_staff_id) %>%
                 layer_histograms(width = 1, fill := "green") %>%
                 add_axis("x", title = "Reporting Staff ID") %>%
-                add_tooltip(function(df){paste0("Reporting Staff ID: ", df$xmin + 0.5)}, "hover") %>%
+                add_tooltip(function(df){paste0("Reporting Staff ID: ", df$x_)}, "hover") %>%
                 bind_shiny("staff")
         
         ## Creat Environment Plot
